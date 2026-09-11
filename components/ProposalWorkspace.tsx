@@ -263,7 +263,7 @@ export function ProposalWorkspace({
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={proposal.status} />
-            <ProposalActionsMenu proposal={proposal} afterDelete="redirect-home" />
+            <ProposalActionsMenu proposal={proposal} afterDelete="redirect-home" afterSave="reload" />
           </div>
         </div>
 

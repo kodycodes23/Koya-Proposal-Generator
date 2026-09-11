@@ -1,6 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { logEvent } from "@/lib/log";
+
+const DetailsSchema = z.object({
+  client_name: z.string().min(1),
+  client_email: z.string().email(),
+  company_name: z.string().min(1),
+  date_of_call: z.string().nullable().optional(),
+  salesperson_name: z.string().min(1),
+});
 
 export async function GET(
   _request: Request,
@@ -34,6 +43,40 @@ export async function GET(
   }
 
   return NextResponse.json({ proposal, sections, events });
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const parsed = DetailsSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Client Name, Client Email, Company Name, and Salesperson Name are required" },
+      { status: 400 }
+    );
+  }
+  const details = parsed.data;
+
+  const { error } = await supabaseAdmin
+    .from("proposals")
+    .update({
+      client_name: details.client_name,
+      client_email: details.client_email,
+      company_name: details.company_name,
+      date_of_call: details.date_of_call || null,
+      salesperson_name: details.salesperson_name,
+    })
+    .eq("id", id);
+
+  if (error) {
+    await logEvent(id, "details_updated", "failure", { error: error.message });
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  await logEvent(id, "details_updated", "success", details);
+  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(
