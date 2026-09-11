@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { logEvent } from "@/lib/log";
 
 export async function GET(
   _request: Request,
@@ -50,11 +51,18 @@ export async function DELETE(
   // proposal_sections and proposal_events cascade-delete via their FK.
   const { error } = await supabaseAdmin.from("proposals").delete().eq("id", id);
   if (error) {
+    await logEvent(id, "deleted", "failure", { error: error.message });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   if (proposal?.pdf_path) {
-    await supabaseAdmin.storage.from("proposal-pdfs").remove([proposal.pdf_path]);
+    const { error: storageError } = await supabaseAdmin.storage.from("proposal-pdfs").remove([proposal.pdf_path]);
+    if (storageError) {
+      // The proposal row (and its events) are already gone at this point, so
+      // there's nowhere left to log this against - surface it in server logs
+      // instead, same as a logEvent write itself failing.
+      console.error(`[delete] failed to remove stored PDF ${proposal.pdf_path}:`, storageError.message);
+    }
   }
 
   return NextResponse.json({ ok: true });

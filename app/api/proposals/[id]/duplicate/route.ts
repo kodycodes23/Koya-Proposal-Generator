@@ -78,10 +78,25 @@ export async function POST(
       }))
     );
     if (copySectionsError) {
-      return NextResponse.json({ error: copySectionsError.message }, { status: 500 });
+      // Don't leave a half-formed duplicate (a proposal row with no
+      // sections) behind - roll it back and log the failure against the
+      // proposal the user was actually acting on.
+      await supabaseAdmin.from("proposals").delete().eq("id", copy.id);
+      await logEvent(id, "duplicated", "failure", {
+        error: copySectionsError.message,
+        attempted_company_name: identity.company_name,
+      });
+      return NextResponse.json(
+        { error: `Duplicate failed while copying sections: ${copySectionsError.message}` },
+        { status: 500 }
+      );
     }
   }
 
+  await logEvent(id, "duplicated", "success", {
+    new_proposal_id: copy.id,
+    new_company_name: copy.company_name,
+  });
   await logEvent(copy.id, "created", "success", {
     duplicated_from: id,
     duplicated_from_company: original.company_name,

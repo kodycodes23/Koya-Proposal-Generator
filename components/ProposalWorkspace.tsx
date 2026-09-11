@@ -505,7 +505,6 @@ export function ProposalWorkspace({
                 <input
                   value={pricingTotalLabel}
                   onChange={(e) => setPricingTotalLabel(e.target.value)}
-                  maxLength={50}
                   placeholder='e.g. "$25k-$35k depending on scope"'
                   className={inputClass}
                 />

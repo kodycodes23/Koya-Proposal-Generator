@@ -7,23 +7,19 @@ export const DeliverablesDataSchema = z.object({ items: z.array(DeliverableItemS
 export const TimelinePhaseSchema = z.object({ name: z.string(), duration: z.string(), description: z.string() });
 export const TimelineDataSchema = z.object({ phases: z.array(TimelinePhaseSchema) });
 
+// Unconstrained shapes - the source of truth for TypeScript types, and what
+// validates a human's own manual edit (via the PATCH route). A person typing
+// their own content isn't at risk of the "AI writes a paragraph" failure mode
+// below, so nothing here should stop them mid-sentence.
 export const PricingLineItemSchema = z.object({
-  label: z.string().max(40).describe('Short name for this line item, e.g. "Website Redesign" - not a sentence'),
-  detail: z
-    .string()
-    .max(80)
-    .describe('A few words of context, e.g. "One-time build cost" - never a paragraph or contract terms'),
+  label: z.string(),
+  detail: z.string(),
   amount: z.number().nullable(),
 });
 export const PricingDataSchema = z.object({
   line_items: z.array(PricingLineItemSchema),
   total: z.number().nullable(),
-  total_label: z
-    .string()
-    .max(50)
-    .describe(
-      'Just the figure, e.g. "$28,000" or "$25k-$35k depending on scope" - never a sentence or paragraph. Any explanation of terms, scope-change policy, or payment schedule belongs in the proposed_solution or next_steps prose sections, not here.'
-    ),
+  total_label: z.string(),
 });
 
 export function formatAmount(amount: number): string {

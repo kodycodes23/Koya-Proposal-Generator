@@ -3,7 +3,14 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import type { DeliverablesData, PricingData, ProposalIntake, SectionKey, TimelineData } from "@/lib/types";
 import { SECTION_LABELS, isStructuredSectionKey } from "@/lib/types";
-import { DeliverableItemSchema, DeliverablesDataSchema, PricingDataSchema, TimelineDataSchema, TimelinePhaseSchema } from "@/lib/sections";
+import {
+  DeliverableItemSchema,
+  DeliverablesDataSchema,
+  PricingDataSchema,
+  PricingLineItemSchema,
+  TimelineDataSchema,
+  TimelinePhaseSchema,
+} from "@/lib/sections";
 
 const client = new Anthropic();
 
@@ -50,12 +57,34 @@ const SECTION_GUIDE = `Sections to produce:
 - pricing (structured line items + total): Reflect estimated_pricing. Use numeric "amount" only when a real number was given for that line; if only a total/range was given with no per-item split, use one line item and/or set amount to null and put the number or range in total_label. Every pricing field (label, detail, total_label) is short - a few words at most, never a sentence or paragraph. Do NOT put payment terms, scope-change policy, or any explanation into pricing fields - if that context is worth including, it belongs in proposed_solution or next_steps prose, not pricing.
 - next_steps (prose): A short, warm closing paragraph about formalizing the engagement. Do NOT sign it or add a "Warm regards" / name / company line at the end - the app appends the signature block separately, right after this text.`;
 
+// Stricter than the base PricingDataSchema (lib/sections.ts) - these length
+// caps exist only to stop Claude from writing paragraph-length text into a
+// field meant to hold a short figure. They apply to AI generation only; a
+// human's own manual edit (validated against the base schema in the PATCH
+// route) is never at risk of that failure mode and shouldn't be capped.
+const AIPricingLineItemSchema = PricingLineItemSchema.extend({
+  label: z.string().max(40).describe('Short name for this line item, e.g. "Website Redesign" - not a sentence'),
+  detail: z
+    .string()
+    .max(80)
+    .describe('A few words of context, e.g. "One-time build cost" - never a paragraph or contract terms'),
+});
+const AIPricingDataSchema = PricingDataSchema.extend({
+  line_items: z.array(AIPricingLineItemSchema),
+  total_label: z
+    .string()
+    .max(50)
+    .describe(
+      'Just the figure, e.g. "$28,000" or "$25k-$35k depending on scope" - never a sentence or paragraph. Any explanation of terms, scope-change policy, or payment schedule belongs in the proposed_solution or next_steps prose sections, not here.'
+    ),
+});
+
 const ProposalSectionsSchema = z.object({
   introduction: z.string(),
   proposed_solution: z.string(),
   deliverables: DeliverablesDataSchema,
   timeline: TimelineDataSchema,
-  pricing: PricingDataSchema,
+  pricing: AIPricingDataSchema,
   next_steps: z.string(),
   missing_fields: z
     .array(z.string())
@@ -100,7 +129,7 @@ const TimelineRegenSchema = z.object({
   phases: z.array(TimelinePhaseSchema),
   missing: z.boolean(),
 });
-const PricingRegenSchema = PricingDataSchema.extend({ missing: z.boolean() });
+const PricingRegenSchema = AIPricingDataSchema.extend({ missing: z.boolean() });
 
 export type RegenResult =
   | { kind: "prose"; content: string; missing: boolean }
