@@ -3,9 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { GridIcon, PlusIcon, ClockIcon } from "@/components/icons";
+import { GridIcon, PlusIcon, ClockIcon, UserIcon, ShieldCheckIcon } from "@/components/icons";
+import { ROLE_LABELS, type Role } from "@/lib/role";
 
-export function TopNav() {
+export function TopNav({ role }: { role: Role | null }) {
   const pathname = usePathname();
   const onDashboard = pathname === "/";
   const onActivity = pathname.startsWith("/activity");
@@ -44,6 +45,17 @@ export function TopNav() {
             <PlusIcon className="w-3.5 h-3.5" />
             New Proposal
           </Link>
+
+          {role && (
+            <Link
+              href="/role"
+              title="Switch role"
+              className="flex items-center gap-1.5 rounded-full bg-gray-100 text-gray-600 pl-2.5 pr-3 py-1.5 text-xs font-medium hover:bg-gray-200 transition-colors"
+            >
+              {role === "manager" ? <ShieldCheckIcon className="w-3.5 h-3.5" /> : <UserIcon className="w-3.5 h-3.5" />}
+              {ROLE_LABELS[role]}
+            </Link>
+          )}
         </div>
       </div>
     </header>

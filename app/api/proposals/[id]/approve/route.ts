@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { logEvent } from "@/lib/log";
+import { requireManager } from "@/lib/authz";
 
 const BodySchema = z.object({ approver_name: z.string().min(1) });
 
@@ -9,6 +10,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const roleError = requireManager(request);
+  if (roleError) return roleError;
+
   const { id } = await params;
   const parsed = BodySchema.safeParse(await request.json());
   if (!parsed.success) {

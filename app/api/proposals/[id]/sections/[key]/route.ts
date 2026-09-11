@@ -9,6 +9,7 @@ import {
   type DeliverablesData,
   type TimelineData,
   type PricingData,
+  type MissingField,
 } from "@/lib/types";
 import {
   DeliverablesDataSchema,
@@ -85,6 +86,20 @@ export async function PATCH(
   if (error) {
     await logEvent(id, "section_edited", "failure", { section_key: key, error: error.message });
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // A human just deliberately provided this section's content, so any
+  // previously-flagged gap for it is resolved - clear it. Otherwise a fixed
+  // section keeps showing a stale "missing information" flag forever.
+  const { data: currentProposal } = await supabaseAdmin
+    .from("proposals")
+    .select("missing_fields")
+    .eq("id", id)
+    .single();
+  const currentMissing = (currentProposal?.missing_fields || []) as MissingField[];
+  const nextMissing = currentMissing.filter((m) => m.section !== sectionKey);
+  if (nextMissing.length !== currentMissing.length) {
+    await supabaseAdmin.from("proposals").update({ missing_fields: nextMissing }).eq("id", id);
   }
 
   await logEvent(id, "section_edited", "success", { section_key: key });

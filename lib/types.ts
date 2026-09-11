@@ -41,10 +41,15 @@ export interface ProposalIntake {
   supporting_material?: string | null;
 }
 
+export interface MissingField {
+  section: SectionKey;
+  description: string;
+}
+
 export interface Proposal extends ProposalIntake {
   id: string;
   status: ProposalStatus;
-  missing_fields: string[];
+  missing_fields: MissingField[];
   approved_by: string | null;
   approved_at: string | null;
   pdf_path: string | null;

@@ -22,6 +22,22 @@ function resolveFromAddress(): string {
   return from;
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Resend's SDK wraps its own fetch() call in a bare `catch {}` and always
+// reports this exact generic line - regardless of whether the real cause was
+// a DNS hiccup, a timeout, or a dropped connection - with `statusCode: null`
+// (no HTTP response was ever received). That signature is the only way to
+// tell "the request never reached Resend" apart from a real API rejection
+// (bad address, sandbox restriction, etc.) - the latter always has a real
+// statusCode and a specific message, and retrying it would just fail again
+// identically, so only this transport-level case is worth retrying.
+function isTransientNetworkFailure(error: { statusCode: number | null; message: string } | null): boolean {
+  return error?.statusCode === null && error.message === "Unable to fetch data. The request could not be resolved.";
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -70,20 +86,29 @@ Koya Talent`;
 <p>Best regards,<br>${escapeHtml(proposal.salesperson_name)}<br>Koya Talent</p>
 </div>`;
 
-  const { data, error } = await resend.emails.send({
-    from: resolveFromAddress(),
-    to: proposal.client_email,
-    replyTo: process.env.EMAIL_REPLY_TO,
-    subject: `Proposal for ${proposal.company_name}`,
-    html,
-    text,
-    attachments: [
-      {
-        filename: `Proposal - ${proposal.company_name}.pdf`,
-        content: pdfBuffer,
-      },
-    ],
-  });
+  const sendOnce = () =>
+    resend.emails.send({
+      from: resolveFromAddress(),
+      to: proposal.client_email,
+      replyTo: process.env.EMAIL_REPLY_TO,
+      subject: `Proposal for ${proposal.company_name}`,
+      html,
+      text,
+      attachments: [
+        {
+          filename: `Proposal - ${proposal.company_name}.pdf`,
+          content: pdfBuffer,
+        },
+      ],
+    });
+
+  const delaysMs = [500, 1500]; // up to 2 retries, only for a transient network failure
+  let { data, error } = await sendOnce();
+
+  for (let attempt = 0; error && isTransientNetworkFailure(error) && attempt < delaysMs.length; attempt++) {
+    await sleep(delaysMs[attempt]);
+    ({ data, error } = await sendOnce());
+  }
 
   if (error) {
     throw new Error(error.message || "Resend failed to send the email");

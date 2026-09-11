@@ -17,6 +17,7 @@ import type {
 } from "@/lib/types";
 import { resolveDeliverables, resolvePricing, resolveTimeline } from "@/lib/sections";
 import { SECTION_ICONS } from "@/components/sectionIcons";
+import type { Role } from "@/lib/role";
 
 const INTAKE_DISPLAY_FIELDS: { key: keyof Proposal; label: string }[] = [
   { key: "client_email", label: "Client Email" },
@@ -110,11 +111,14 @@ export function ProposalWorkspace({
   initialProposal,
   initialSections,
   initialEvents,
+  role,
 }: {
   initialProposal: Proposal;
   initialSections: ProposalSection[];
   initialEvents: ProposalEvent[];
+  role: Role | null;
 }) {
+  const isManager = role === "manager";
   const [proposal, setProposal] = useState(initialProposal);
   const [sections, setSections] = useState(initialSections);
   const [events, setEvents] = useState(initialEvents);
@@ -290,7 +294,9 @@ export function ProposalWorkspace({
           <p className="font-medium mb-1.5">Missing information flagged</p>
           <ul className="list-disc list-inside space-y-0.5">
             {proposal.missing_fields.map((f, i) => (
-              <li key={i}>{f}</li>
+              <li key={i}>
+                <strong>{SECTION_LABELS[f.section]}:</strong> {f.description}
+              </li>
             ))}
           </ul>
         </div>
@@ -542,48 +548,62 @@ export function ProposalWorkspace({
             )}
 
             {proposal.status === "pending_approval" && (
-              <div className="space-y-3">
-                <input
-                  placeholder="Approver name"
-                  value={approverName}
-                  onChange={(e) => setApproverName(e.target.value)}
-                  className={`max-w-xs ${inputClass}`}
-                />
-                <div className="flex gap-2 items-center flex-wrap">
-                  <button
-                    onClick={() => approverName && doAction("approve", { approver_name: approverName })}
-                    disabled={actionBusy || !approverName}
-                    className="rounded-full bg-indigo-600 text-white px-4 py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-                  >
-                    Approve
-                  </button>
+              isManager ? (
+                <div className="space-y-3">
                   <input
-                    placeholder="Rejection reason (optional)"
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    className={inputClass}
+                    placeholder="Approver name"
+                    value={approverName}
+                    onChange={(e) => setApproverName(e.target.value)}
+                    className={`max-w-xs ${inputClass}`}
                   />
-                  <button
-                    onClick={() =>
-                      approverName && doAction("reject", { approver_name: approverName, reason: rejectReason })
-                    }
-                    disabled={actionBusy || !approverName}
-                    className="rounded-full border border-red-200 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-50"
-                  >
-                    Reject
-                  </button>
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <button
+                      onClick={() => approverName && doAction("approve", { approver_name: approverName })}
+                      disabled={actionBusy || !approverName}
+                      className="rounded-full bg-indigo-600 text-white px-4 py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      Approve
+                    </button>
+                    <input
+                      placeholder="Rejection reason (optional)"
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      className={inputClass}
+                    />
+                    <button
+                      onClick={() =>
+                        approverName && doAction("reject", { approver_name: approverName, reason: rejectReason })
+                      }
+                      disabled={actionBusy || !approverName}
+                      className="rounded-full border border-red-200 text-red-700 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Waiting on a manager to approve or reject this proposal.
+                </p>
+              )
             )}
 
             {(proposal.status === "approved" || proposal.status === "send_failed") && (
-              <button
-                onClick={() => doAction("send")}
-                disabled={actionBusy}
-                className="rounded-full bg-indigo-600 text-white px-4 py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {proposal.status === "send_failed" ? "Retry Send to Client" : "Generate Final Document & Send to Client"}
-              </button>
+              isManager ? (
+                <button
+                  onClick={() => doAction("send")}
+                  disabled={actionBusy}
+                  className="rounded-full bg-indigo-600 text-white px-4 py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {proposal.status === "send_failed" ? "Retry Send to Client" : "Generate Final Document & Send to Client"}
+                </button>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  {proposal.status === "send_failed"
+                    ? "Sending failed — waiting on a manager to retry."
+                    : "Approved — waiting on a manager to send this to the client."}
+                </p>
+              )
             )}
 
             {proposal.status === "sent" && (

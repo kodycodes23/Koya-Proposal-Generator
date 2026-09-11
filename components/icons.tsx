@@ -134,6 +134,45 @@ export function TrashIcon({ className = base }: IconProps) {
   );
 }
 
+export function UserIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function ShieldCheckIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>
+      <path d="M12 3.5 19 6v6c0 4.2-2.8 7.4-7 8.5C7.8 19.4 5 16.2 5 12V6l7-2.5Z" strokeLinejoin="round" />
+      <path d="m9 12 2 2 4-4.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function PaperclipIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>
+      <path
+        d="M17.5 8 9.4 16.1a3 3 0 1 1-4.2-4.2l8-8a2 2 0 0 1 2.9 2.9l-7.9 7.9a1 1 0 0 1-1.5-1.5l7-7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function SparkleIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M11 2.5 12.6 8.4 18.5 10 12.6 11.6 11 17.5 9.4 11.6 3.5 10 9.4 8.4 11 2.5Z" />
+      <path d="M18 14.5 18.8 17.2 21.5 18 18.8 18.8 18 21.5 17.2 18.8 14.5 18 17.2 17.2 18 14.5Z" />
+    </svg>
+  );
+}
+
 export function GridIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>

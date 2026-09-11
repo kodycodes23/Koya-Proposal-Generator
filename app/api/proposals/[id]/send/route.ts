@@ -1,16 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { logEvent } from "@/lib/log";
 import { renderProposalPdf } from "@/lib/pdf";
 import { sendProposalEmail } from "@/lib/email";
+import { requireManager } from "@/lib/authz";
 import type { Proposal, ProposalSection } from "@/lib/types";
 
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 export async function POST(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const roleError = requireManager(request);
+  if (roleError) return roleError;
+
   const { id } = await params;
 
   const { data: proposal, error: proposalError } = await supabaseAdmin
