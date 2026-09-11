@@ -3,6 +3,25 @@ import type { Proposal } from "@/lib/types";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Matches "email@example.com" or "Name <email@example.com>" - the same shape
+// Resend requires. Checked before every send (not just at module load) so a
+// misconfigured or stale env value fails with a clear, actionable message
+// pointing at .env.local, instead of a generic third-party validation error
+// that gives no hint *why* the address is wrong.
+const FROM_FORMAT = /^(?:[^<>]+<[^\s<>@]+@[^\s<>@]+>|[^\s<>@]+@[^\s<>@]+)$/;
+
+function resolveFromAddress(): string {
+  const from = (process.env.EMAIL_FROM || "Koya Talent <onboarding@resend.dev>").trim();
+  if (!FROM_FORMAT.test(from)) {
+    throw new Error(
+      `EMAIL_FROM is misconfigured: "${from}" is not a valid sender address. Expected "email@example.com" or ` +
+        `"Name <email@example.com>". Check .env.local - if you just edited it, restart the dev server, since ` +
+        `env vars are only read once at startup.`
+    );
+  }
+  return from;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -52,7 +71,7 @@ Koya Talent`;
 </div>`;
 
   const { data, error } = await resend.emails.send({
-    from: process.env.EMAIL_FROM || "Koya Talent <onboarding@resend.dev>",
+    from: resolveFromAddress(),
     to: proposal.client_email,
     replyTo: process.env.EMAIL_REPLY_TO,
     subject: `Proposal for ${proposal.company_name}`,
